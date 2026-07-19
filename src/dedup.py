@@ -20,13 +20,13 @@ from scipy.spatial.distance import squareform
 def sketch_genomes(fasta_dir: Path, ksize: int, scaled: int) -> dict[str, "MinHash"]:
     """One MinHash signature per FASTA. Returns {genome_id: MinHash}."""
     import sourmash
-    import screed
 
     sigs: dict = {}
-    for fasta in sorted(Path(fasta_dir).glob("*.fasta")):
+    for fasta in sorted(Path(fasta_dir).glob("*.fna")):
         mh = sourmash.MinHash(n=0, ksize=ksize, scaled=scaled)
-        for record in screed.open(str(fasta)):
-            mh.add_sequence(record.sequence, force=True)
+        for line in open(fasta):
+            if not line.startswith(">"):
+                mh.add_sequence(line.strip(), force=True)
         sigs[fasta.stem] = mh
     return sigs
 

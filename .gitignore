@@ -1,9 +1,11 @@
+# Raw genomes and AMRFinderPlus cache — large / regenerable, never commit
 data/genomes/
 data/amrfinder/
-data/features.parquet
 data/signatures.pkl
-artifacts/
+
+# Environment & outputs
 venv/
+artifacts/
 __pycache__/
 *.pyc
 .DS_Store

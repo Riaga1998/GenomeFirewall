@@ -22,8 +22,8 @@ import pandas as pd
 
 # AMRFinderPlus renamed columns across versions. Be defensive.
 _SYMBOL_COLS = ["Element symbol", "Gene symbol"]
-_TYPE_COLS = ["Element type"]
-_SUBTYPE_COLS = ["Element subtype"]
+_TYPE_COLS = ["Element type", "Type"]
+_SUBTYPE_COLS = ["Element subtype", "Subtype"]
 _CLASS_COLS = ["Class"]
 
 

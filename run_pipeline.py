@@ -31,8 +31,8 @@ def main():
     cfg = yaml.safe_load(open("config/config.yaml"))
     p = cfg["paths"]
     feats = pd.read_parquet(p["features"])
-    labels = pd.read_csv(p["labels"])
-    groups = pd.read_csv(p["groups"]).set_index("genome_id")["group_id"]
+    labels = pd.read_csv(p["labels"], dtype={"genome_id": str})
+    groups = pd.read_csv(p["groups"], dtype={"genome_id": str}).set_index("genome_id")["group_id"]
     gate = load_gate()
     curated = set(curated_determinant_columns(feats))
 

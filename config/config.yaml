@@ -25,7 +25,7 @@ paths:
 dedup:
   ksize: 31
   scaled: 1000
-  jaccard_threshold: 0.99
+  jaccard_threshold: 0.90
 
 ood:
   min_containment_to_train: 0.90
