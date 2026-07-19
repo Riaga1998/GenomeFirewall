@@ -176,13 +176,19 @@ st.caption(
 )
 render_disclaimer()
 
-# The one thing a viewer must not misread.
+# The one thing a viewer must not misread. The genome count is read from the dataset
+# summary rather than hardcoded — three different counts exist at different stages of
+# the funnel, and quoting one here while the metric cards show another invites the
+# question of which is right.
+_summary = load_summary(COHORT / "dataset_summary.json")
+_n_genomes = f"{_summary['scoped_unique_genomes']:,}" if _summary else "the"
+
 st.info(
-    "**What is real here, and what is not.** The cohort tab shows genuine BV-BRC "
-    "laboratory phenotypes for 3,868 *S. aureus* genomes. The predictive model is a "
-    "separate artifact fitted on **synthetic** features — the BV-BRC export carries "
-    "phenotypes but no genome assemblies, so no features can be derived from it. The "
-    "real cohort did not train this model.",
+    f"**What is real here, and what is not.** The cohort tab shows genuine BV-BRC "
+    f"laboratory phenotypes for {_n_genomes} *S. aureus* genomes. The predictive model "
+    f"is a separate artifact fitted on **synthetic** features — the BV-BRC export "
+    f"carries phenotypes but no genome assemblies, so no features can be derived from "
+    f"it. The real cohort did not train this model.",
     icon="🔍",
 )
 
@@ -214,6 +220,29 @@ with tab_cohort:
                       help="Same genome-drug pair with disagreeing results. Dropped, not guessed.")
             c4.metric("Unlabelled", f"{summary['unlabeled_genome_drug_records']:,}",
                       help="Intermediate or untested — the assay could not call these.")
+
+            with st.expander("How the cohort was narrowed, and what was dropped"):
+                st.markdown(
+                    f"""
+| Stage | Rows | Genomes |
+|---|---|---|
+| BV-BRC export, all taxa | {summary['source_rows_all_taxa']:,} | {summary['source_genomes_all_taxa']:,} |
+| Scoped to *S. aureus* + these four drugs | {summary['scoped_source_rows']:,} | {summary['scoped_unique_genomes']:,} |
+| Resolved to one label per genome-drug pair | {summary['resolved_genome_drug_records']:,} | — |
+| **Usable binary labels** | **{summary['usable_genome_drug_labels']:,}** | — |
+
+Two categories are removed rather than repaired, and both are counted above.
+
+**{summary['conflicting_genome_drug_labels']} conflicting pairs** — the same genome and
+drug recorded with disagreeing results. Averaging them or taking the last row would
+bury a real disagreement in the source, so they are dropped.
+
+**{summary['unlabeled_genome_drug_records']} unlabelled records** — intermediate or
+untested. Intermediate means the assay itself could not call the isolate; folding it
+into resistant or susceptible would manufacture a certainty the laboratory did not
+have. That is the same principle as the model's no-call, applied to the labels.
+"""
+                )
 
         drugs = st.multiselect("Antibiotics", ANTIBIOTICS, default=ANTIBIOTICS)
         if not drugs:
