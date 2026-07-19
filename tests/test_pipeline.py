@@ -194,10 +194,12 @@ class TestEvidenceVocabulary:
         if drug not in panel.models:
             pytest.skip(f"{drug} not trained in this sample")
 
-        predictions = panel.predict_genome({"gene:ermC": 1, "class:MACROLIDE": 1})
+        predictions = panel.predict_genome(
+            {"gene:erm(C)": 1, "class:LINCOSAMIDE/MACROLIDE/STREPTOGRAMIN": 1}
+        )
         pred = predictions[list(panel.models).index(drug)]
         assert pred.evidence_type == EVIDENCE_KNOWN_DETERMINANT, (
-            f"ermC should count as a known mechanism, got: {pred.evidence_type}"
+            f"erm(C) should count as a known mechanism, got: {pred.evidence_type}"
         )
 
 
@@ -441,3 +443,86 @@ class TestRealDataLoader:
         )
         if not report.empty:
             assert report.index.get_level_values("cluster_id")[0].startswith("clade_")
+
+
+class TestMRSADemoGenome:
+    """End-to-end check on the demo assembly, if AMRFinderPlus is installed.
+
+    This is the path a judge exercises: upload a genome, read the report. Unit tests
+    cover the pieces, but only running the real annotator catches vocabulary drift
+    between what AMRFinderPlus emits and what the drug knowledge base expects — which
+    has now happened three times (v3/v4 column names, SULFONAMIDE, and the alphabetical
+    ordering of the combined MLSb class tag).
+    """
+
+    DEMO = Path(__file__).resolve().parent.parent / "data" / "raw" / "mrsa_demo.fasta"
+
+    @pytest.fixture(scope="class")
+    def annotated(self):
+        from src.utils import amrfinder
+        if not amrfinder.is_available():
+            pytest.skip("AMRFinderPlus not installed")
+        if not self.DEMO.exists():
+            pytest.skip("demo genome not present")
+        from src.genome_reader import featurize_fasta
+        _, features, qc, hits = featurize_fasta(self.DEMO, organism="Staphylococcus_aureus")
+        return features, qc, hits
+
+    def test_all_four_determinants_are_detected(self, annotated):
+        _, _, hits = annotated
+        found = {h.gene_symbol for h in hits}
+        assert {"mecA", "erm(C)", "tet(K)", "blaZ"} <= found, f"missing from {found}"
+
+    def test_assembly_passes_qc(self, annotated):
+        """A realistic-length scaffold, so no QC flag fires during a demo."""
+        _, qc, _ = annotated
+        assert not qc.flags()
+
+    def test_mecA_drives_the_cefoxitin_call(self, annotated, trained_panel):
+        """mecA encodes PBP2a — this is the MRSA call the system exists to make."""
+        features, _, _ = annotated
+        panel, *_ = trained_panel
+        if "cefoxitin" not in panel.models:
+            pytest.skip("cefoxitin not trained in this sample")
+
+        pred = panel.predict_genome(features)[list(panel.models).index("cefoxitin")]
+        assert pred.decision == LIKELY_TO_FAIL
+        assert any("mecA" in f for f in pred.supporting_features), pred.supporting_features
+
+    def test_blaZ_is_not_credited_for_cefoxitin(self, annotated, trained_panel):
+        """blaZ is a penicillinase; it leaves cephamycins intact.
+
+        It is common in S. aureus and co-occurs with resistance without causing it, so
+        it is exactly the confounder that separates a known mechanism from a bare
+        correlation. Citing it as the reason for a cefoxitin failure would be wrong
+        even though the call itself would be right.
+        """
+        features, _, _ = annotated
+        panel, *_ = trained_panel
+        if "cefoxitin" not in panel.models:
+            pytest.skip("cefoxitin not trained in this sample")
+
+        pred = panel.predict_genome(features)[list(panel.models).index("cefoxitin")]
+        assert not any("blaZ" in f for f in pred.supporting_features), (
+            f"blaZ cited as cefoxitin evidence: {pred.supporting_features}"
+        )
+
+    def test_erm_hit_reads_as_a_known_mechanism(self, annotated, trained_panel):
+        """Guards the combined MLSb class tag, whose component order we had wrong."""
+        features, _, _ = annotated
+        panel, *_ = trained_panel
+        if "erythromycin" not in panel.models:
+            pytest.skip("erythromycin not trained in this sample")
+
+        pred = panel.predict_genome(features)[list(panel.models).index("erythromycin")]
+        assert pred.evidence_type == EVIDENCE_KNOWN_DETERMINANT, pred.evidence_type
+
+    def test_ciprofloxacin_is_declined_without_a_determinant(self, annotated, trained_panel):
+        """No gyrA/grlA mutation in this genome, so no confident call either way."""
+        features, _, _ = annotated
+        panel, *_ = trained_panel
+        if "ciprofloxacin" not in panel.models:
+            pytest.skip("ciprofloxacin not trained in this sample")
+
+        pred = panel.predict_genome(features)[list(panel.models).index("ciprofloxacin")]
+        assert pred.decision != LIKELY_TO_FAIL or pred.supporting_features

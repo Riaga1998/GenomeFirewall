@@ -23,7 +23,7 @@ import pandas as pd
 # organism, and the resulting feature names would never match a real AMRFinderPlus report.
 GENE_POOL = {
     "BETA-LACTAM": ["mecA", "mecC", "blaZ"],
-    "MACROLIDE": ["ermA", "ermB", "ermC", "msrA", "mphC"],
+    "LINCOSAMIDE/MACROLIDE/STREPTOGRAMIN": ["erm(A)", "erm(B)", "erm(C)", "msr(A)", "mph(C)"],
     "TETRACYCLINE": ["tet(K)", "tet(L)", "tet(M)"],
     "AMINOGLYCOSIDE": ["aac(6')-aph(2'')", "aph(3')-III", "ant(4')-Ia"],
     "TRIMETHOPRIM": ["dfrG", "dfrK"],
@@ -57,8 +57,8 @@ DRUG_MECHANISMS = {
                     "grlA_S80Y": 0.71, "norA": 0.35},
     },
     "erythromycin": {
-        "class": "MACROLIDE",
-        "drivers": {"ermA": 0.93, "ermB": 0.90, "ermC": 0.92, "msrA": 0.76, "mphC": 0.55},
+        "class": "LINCOSAMIDE/MACROLIDE/STREPTOGRAMIN",
+        "drivers": {"erm(A)": 0.93, "erm(B)": 0.90, "erm(C)": 0.92, "msr(A)": 0.76, "mph(C)": 0.55},
     },
     "tetracycline": {
         "class": "TETRACYCLINE",

@@ -123,9 +123,14 @@ DRUGS: dict[str, Drug] = {
         # phenotype — macrolide, lincosamide and streptogramin B together. msrA is an
         # efflux pump giving macrolide resistance without lincosamide resistance.
         # AMRFinderPlus spans several class spellings for these, so all are accepted.
+        # AMRFinderPlus emits the combined MLSb tag alphabetically, as
+        # "LINCOSAMIDE/MACROLIDE/STREPTOGRAMIN". Guessing the component order wrong
+        # means the tag never matches and a genuine erm hit is demoted to a bare
+        # statistical association. Verified against the real tool, not assumed.
         amr_classes=frozenset({
-            "MACROLIDE", "LINCOSAMIDE", "STREPTOGRAMIN",
-            "MACROLIDE/LINCOSAMIDE/STREPTOGRAMIN", "ERYTHROMYCIN",
+            "MACROLIDE", "LINCOSAMIDE", "STREPTOGRAMIN", "ERYTHROMYCIN",
+            "LINCOSAMIDE/MACROLIDE/STREPTOGRAMIN",
+            "MACROLIDE/LINCOSAMIDE/STREPTOGRAMIN",
         }),
     ),
     "levofloxacin": Drug(
