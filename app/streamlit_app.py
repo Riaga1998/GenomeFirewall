@@ -137,6 +137,11 @@ species = st.selectbox(
 
 tab_upload, tab_manual = st.tabs(["Upload assembly (FASTA)", "Enter determinants manually"])
 
+# The closing disclaimer refers to "every report below", so it may only appear once a
+# report actually exists. Rendered unconditionally it stacked directly under the opening
+# disclaimer, pointing at nothing.
+report_rendered = False
+
 with tab_upload:
     uploaded = st.file_uploader(
         "Quality-checked assembled genome",
@@ -184,6 +189,7 @@ with tab_upload:
                 st.subheader("Antibiotic-response report")
                 for pred in predictions:
                     render_prediction(pred)
+                report_rendered = True
 
                 report = pd.DataFrame([p.to_dict() for p in predictions])
                 st.download_button(
@@ -223,6 +229,7 @@ with tab_manual:
         st.subheader("Antibiotic-response report")
         for pred in predictions:
             render_prediction(pred)
+        report_rendered = True
 
         report = pd.DataFrame([p.to_dict() for p in predictions])
         st.download_button(
@@ -232,5 +239,6 @@ with tab_manual:
             mime="text/csv",
         )
 
-st.divider()
-render_disclaimer()
+if report_rendered:
+    st.divider()
+    render_disclaimer()
