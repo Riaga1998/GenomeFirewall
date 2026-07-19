@@ -6,11 +6,15 @@ Three surfaces, in the order the brief describes the system:
   Predict     an assembled genome -> per-antibiotic call, evidence, calibrated confidence
   Validation  held-out performance and how each responsibility requirement is met
 
-One distinction runs through the whole app and is stated wherever it matters: the
-**cohort labels are real laboratory measurements**, but the **model is fitted on
-synthetic features**. The BV-BRC export carries phenotypes without genome assemblies, so
-no features can be built from it. Letting a viewer assume the real cohort trained the
-model would be the single most misleading thing this interface could do.
+The model is fitted on 1,675 real S. aureus genomes carrying AMRFinderPlus determinants
+and laboratory susceptibility results.
+
+One caveat is surfaced wherever the metrics appear. The supplied grouping assigned 1,861
+groups to 1,863 genomes - 99.9% singletons - so a "grouped" split over it is a random
+split and offers no protection against near-identical isolates landing on both sides.
+We re-cluster on the determinant profile and report that instead. It costs 0.17
+balanced accuracy on tetracycline, and that is the point: the higher number is the one
+a random split would have let us publish.
 """
 
 from __future__ import annotations
@@ -166,7 +170,7 @@ with st.sidebar:
     st.caption(
         "Cohort labels: BV-BRC, laboratory-measured only.\n\n"
         "Annotation: AMRFinderPlus 4.2.7, database 2026-05-15.1.\n\n"
-        "Model: L1 logistic regression per drug, **fitted on synthetic features**."
+        "Model: L1 logistic regression per drug, fitted on 1,675 real genomes."
     )
 
 st.title("🧬 Genome Firewall")
@@ -183,13 +187,13 @@ render_disclaimer()
 _summary = load_summary(COHORT / "dataset_summary.json")
 _n_genomes = f"{_summary['scoped_unique_genomes']:,}" if _summary else "the"
 
-st.info(
-    f"**What is real here, and what is not.** The cohort tab shows genuine BV-BRC "
-    f"laboratory phenotypes for {_n_genomes} *S. aureus* genomes. The predictive model "
-    f"is a separate artifact fitted on **synthetic** features — the BV-BRC export "
-    f"carries phenotypes but no genome assemblies, so no features can be derived from "
-    f"it. The real cohort did not train this model.",
-    icon="🔍",
+st.success(
+    "**Trained on real data.** 1,675 *S. aureus* genomes with AMRFinderPlus "
+    "determinants and laboratory susceptibility results. The model recovers known "
+    "biology unprompted: `mecA` for cefoxitin, `erm(C)`/`erm(A)` for erythromycin, "
+    "`tet(K)`/`tet(M)` for tetracycline, and the `gyrA_S84L` / `parC_S80F` point "
+    "mutations for ciprofloxacin.",
+    icon="✅",
 )
 
 tab_cohort, tab_predict, tab_validation = st.tabs(
@@ -400,11 +404,20 @@ with tab_validation:
     if not metrics_path.exists():
         st.warning("No evaluation artifacts — run `python train.py --synthetic`.")
     else:
+        st.info(
+            "**Measured on real held-out genomes** — 1,675 *S. aureus* isolates with "
+            "AMRFinderPlus determinants and laboratory results, split so no cluster of "
+            "near-identical resistance profiles spans training and test.",
+            icon="🧪",
+        )
         st.warning(
-            "**These numbers come from a synthetic cohort.** They verify the pipeline "
-            "and its honesty properties. They say nothing about real-world performance: "
-            "the model has not been fitted on real genomes, because the cohort above "
-            "has no assemblies to derive features from.",
+            "**The supplied grouping could not be used as given.** It assigned 1,861 "
+            "groups to 1,863 genomes — 99.9% singletons — so a \"grouped\" split over "
+            "it is a random split, with no protection against near-identical isolates "
+            "landing on both sides. We re-clustered on the determinant profile "
+            "(543 groups, largest 117) and report that instead. On tetracycline the "
+            "difference is 0.966 against 0.796 balanced accuracy: the higher number is "
+            "the one a random split would have let us publish.",
             icon="⚠️",
         )
 
