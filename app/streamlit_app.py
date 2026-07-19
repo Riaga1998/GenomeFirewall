@@ -318,12 +318,39 @@ with tab_predict:
             help="Drives the deterministic target gate and the AMRFinderPlus organism profile.",
         )
 
-        if DEMO_GENOME.exists():
-            st.caption(
-                f"No genome to hand? A demo MRSA assembly ships with the repo at "
-                f"`{DEMO_GENOME.relative_to(ROOT)}` — it carries mecA, erm(C), tet(K) "
-                f"and blaZ. Annotation takes 3–4 minutes."
-            )
+        # AMRFinderPlus needs conda and is unavailable on pip-only hosts such as
+        # Streamlit Cloud. Rather than leave the demo dead there, a precomputed
+        # annotation of the bundled MRSA genome ships with the repo, so the full
+        # report can still be produced from a real AMRFinderPlus run.
+        demo_annotation = ROOT / "data" / "raw" / "mrsa_demo_annotation.json"
+        if demo_annotation.exists():
+            record = json.loads(demo_annotation.read_text())
+            with st.container(border=True):
+                st.markdown("**Try it without uploading anything**")
+                st.caption(
+                    f"A bundled MRSA assembly, already annotated with AMRFinderPlus "
+                    f"{record['amrfinder_version']} (database {record['database_version']}). "
+                    f"Detected: "
+                    + ", ".join(f"`{h['gene']}`" for h in record["hits"])
+                    + ". Useful where AMRFinderPlus cannot be installed, and identical "
+                      "to what a live run produces."
+                )
+                if st.button("Run the demo genome", type="primary"):
+                    st.success(
+                        f"{len(record['hits'])} resistance determinants detected: "
+                        + ", ".join(sorted(h["gene"] for h in record["hits"]))
+                    )
+                    demo_preds = panel.predict_genome(record["features"])
+                    st.subheader("Antibiotic-response report")
+                    for pred in demo_preds:
+                        render_prediction(pred)
+                    st.download_button(
+                        "Download report (CSV)",
+                        pd.DataFrame([x.to_dict() for x in demo_preds]).to_csv(index=False).encode(),
+                        file_name="mrsa_demo_antibiotic_report.csv",
+                        mime="text/csv",
+                    )
+                    render_disclaimer()
 
         uploaded = st.file_uploader(
             "Quality-checked assembled genome",
