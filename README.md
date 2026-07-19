@@ -7,7 +7,7 @@
 | Member | Programme / Role | Institution | Location |
 |---|---|---|---|
 | **Ritika Agarwal** | MSE, Computer and Information Sciences · Research Assistant, Perelman School of Medicine | University of Pennsylvania | Philadelphia, PA, USA |
-| **Deepak Kushwaha** | MSc Data Science | — | Naples, Italy |
+| **Deepak Kushwaha** | MSc Data Science | University of Naples Federico II | Naples, Italy |
 | **Hirak Jain** | B.Tech, Artificial Intelligence | Guru Gobind Singh Indraprastha University | Delhi, India |
 
 Built for the Hack-Nation Global AI Hackathon, Challenge 06 — Genome Firewall.
