@@ -230,3 +230,43 @@ def parse_report(df: pd.DataFrame, min_identity: float = 90.0, min_coverage: flo
             )
         )
     return hits
+
+
+# AMRFinderPlus --organism values, keyed by the species names this project uses.
+#
+# Supplying this flag is what enables point-mutation detection. Without it the tool
+# reports acquired genes only — and for S. aureus ciprofloxacin, where resistance is
+# stepwise gyrA/grlA mutation rather than an acquired gene, that means the real
+# mechanism is invisible and every isolate looks like it has no quinolone signal.
+#
+# The names are not derivable from the species string: E. coli is "Escherichia", and
+# Salmonella and Campylobacter are genus-level. Verified against `amrfinder -l`
+# (database 2026-05-15.1).
+ORGANISM_FLAGS: dict[str, str] = {
+    "acinetobacter baumannii": "Acinetobacter_baumannii",
+    "campylobacter": "Campylobacter",
+    "enterococcus faecalis": "Enterococcus_faecalis",
+    "enterococcus faecium": "Enterococcus_faecium",
+    "escherichia coli": "Escherichia",
+    "klebsiella pneumoniae": "Klebsiella_pneumoniae",
+    "neisseria gonorrhoeae": "Neisseria_gonorrhoeae",
+    "pseudomonas aeruginosa": "Pseudomonas_aeruginosa",
+    "salmonella enterica": "Salmonella",
+    "staphylococcus aureus": "Staphylococcus_aureus",
+    "staphylococcus epidermidis": "Staphylococcus_epidermidis",
+    "streptococcus agalactiae": "Streptococcus_agalactiae",
+    "streptococcus pneumoniae": "Streptococcus_pneumoniae",
+    "streptococcus pyogenes": "Streptococcus_pyogenes",
+}
+
+
+def organism_flag(species: str | None) -> str | None:
+    """Map a species name to its --organism value, or None if unsupported.
+
+    An unsupported species is not an error: annotation still runs and finds acquired
+    genes. Only point mutations are unavailable, and the report says so rather than
+    presenting their absence as evidence of susceptibility.
+    """
+    if not species:
+        return None
+    return ORGANISM_FLAGS.get(species.strip().lower())

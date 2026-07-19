@@ -164,9 +164,23 @@ with tab_upload:
                 tmp_path = Path(scratch) / uploaded.name
                 tmp_path.write_bytes(uploaded.getbuffer())
 
+                # Passing --organism is what turns on point-mutation detection. For
+                # S. aureus ciprofloxacin the mechanism is gyrA/grlA mutation rather
+                # than an acquired gene, so without this the real cause is invisible
+                # and the isolate looks like it carries no quinolone signal at all.
+                flag = amrfinder.organism_flag(species)
+                if flag is None:
+                    st.info(
+                        f"{species.title()} has no AMRFinderPlus organism profile, so "
+                        "point mutations cannot be detected — only acquired genes. "
+                        "Absence of a mutation call below is uninformative, not "
+                        "reassuring.",
+                        icon="ℹ️",
+                    )
+
                 try:
                     with st.spinner("Annotating with AMRFinderPlus…"):
-                        _, features, qc, hits = featurize_fasta(tmp_path, organism=None)
+                        _, features, qc, hits = featurize_fasta(tmp_path, organism=flag)
                 except Exception as exc:
                     st.error(f"Annotation failed: {exc}")
                     st.stop()

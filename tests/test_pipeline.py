@@ -526,3 +526,47 @@ class TestMRSADemoGenome:
 
         pred = panel.predict_genome(features)[list(panel.models).index("ciprofloxacin")]
         assert pred.decision != LIKELY_TO_FAIL or pred.supporting_features
+
+
+class TestOrganismFlag:
+    """--organism is what enables point-mutation detection.
+
+    The app passed organism=None, so AMRFinderPlus reported acquired genes only. For
+    S. aureus ciprofloxacin, where resistance is stepwise gyrA/grlA mutation rather
+    than an acquired gene, that made the real mechanism undetectable — every isolate
+    looked like it carried no quinolone signal.
+    """
+
+    def test_supported_species_map_to_amrfinder_names(self):
+        from src.utils.amrfinder import organism_flag
+        assert organism_flag("staphylococcus aureus") == "Staphylococcus_aureus"
+        assert organism_flag("Staphylococcus Aureus") == "Staphylococcus_aureus"
+
+    def test_names_are_not_derivable_from_the_species_string(self):
+        """E. coli is 'Escherichia'; Salmonella is genus-level. Hence the explicit map."""
+        from src.utils.amrfinder import organism_flag
+        assert organism_flag("escherichia coli") == "Escherichia"
+        assert organism_flag("salmonella enterica") == "Salmonella"
+
+    def test_unsupported_species_returns_none_rather_than_guessing(self):
+        from src.utils.amrfinder import organism_flag
+        assert organism_flag("made up bacterium") is None
+        assert organism_flag(None) is None
+
+    def test_every_mapped_name_is_accepted_by_the_installed_tool(self):
+        """Guards against drift between our map and the tool's organism list."""
+        import subprocess
+        from src.utils.amrfinder import ORGANISM_FLAGS, find_binary
+
+        binary = find_binary()
+        if binary is None:
+            pytest.skip("AMRFinderPlus not installed")
+
+        listing = subprocess.run([binary, "-l"], capture_output=True, text=True).stdout
+        supported = {
+            name.strip()
+            for line in listing.splitlines() if "--organism options:" in line
+            for name in line.split(":", 1)[1].split(",")
+        }
+        unknown = set(ORGANISM_FLAGS.values()) - supported
+        assert not unknown, f"not accepted by AMRFinderPlus {supported and ''}: {unknown}"
