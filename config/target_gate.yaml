@@ -1,0 +1,19 @@
+# Deterministic target gate (optional layer). Entries with empty rules let the
+# ML model speak freely. Curate these with CARD / literature if you want hard
+# intrinsic-resistance overrides for S. aureus; the pipeline runs fine as-is.
+cefoxitin:
+  drug_class: cephamycin
+  target_required: []
+  intrinsic_fail_if_present: []
+ciprofloxacin:
+  drug_class: fluoroquinolone
+  target_required: []
+  intrinsic_fail_if_present: []
+erythromycin:
+  drug_class: macrolide
+  target_required: []
+  intrinsic_fail_if_present: []
+tetracycline:
+  drug_class: tetracycline
+  target_required: []
+  intrinsic_fail_if_present: []

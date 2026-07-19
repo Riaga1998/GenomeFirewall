@@ -1,0 +1,13 @@
+numpy
+pandas
+pyarrow
+scikit-learn
+scipy
+pyyaml
+streamlit
+matplotlib
+# real-data path (optional for the synthetic demo):
+sourmash
+screed
+venn-abers
+openai

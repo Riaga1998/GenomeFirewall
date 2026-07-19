@@ -1,0 +1,9 @@
+data/genomes/
+data/amrfinder/
+data/features.parquet
+data/signatures.pkl
+artifacts/
+venv/
+__pycache__/
+*.pyc
+.DS_Store

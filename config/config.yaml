@@ -1,0 +1,41 @@
+# ---------------------------------------------------------------------------
+# GENOME FIREWALL — configuration (Staphylococcus aureus, real BV-BRC data)
+# ---------------------------------------------------------------------------
+
+species: "Staphylococcus aureus"
+organism_amrfinder: "Staphylococcus_aureus"   # --organism flag for AMRFinderPlus
+
+# Four mechanistically distinct drugs, all lab-measured & class-balanced.
+antibiotics:
+  - cefoxitin        # mecA (methicillin resistance) — textbook gene acquisition
+  - ciprofloxacin    # gyrA/grlA POINT mutations (needs --organism!)
+  - erythromycin     # erm/msr genes
+  - tetracycline     # tet genes
+
+paths:
+  fasta_dir: "data/genomes"
+  amrfinder_cache: "data/amrfinder"
+  signatures: "data/signatures.pkl"
+  labels: "data/labels.csv"
+  features: "data/features.parquet"
+  groups: "data/groups.csv"
+  models: "artifacts/models"
+  reports: "artifacts/reports"
+
+dedup:
+  ksize: 31
+  scaled: 1000
+  jaccard_threshold: 0.99
+
+ood:
+  min_containment_to_train: 0.90
+
+calibration:
+  method: venn_abers
+  cv_folds: 5
+
+decision:
+  susceptible_threshold: 0.65
+  resistant_threshold: 0.65
+
+seed: 7
