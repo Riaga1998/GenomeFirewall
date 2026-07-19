@@ -135,7 +135,11 @@ species = st.selectbox(
     help="Used by the deterministic target gate, which rules out drugs the species is intrinsically resistant to.",
 )
 
-tab_upload, tab_manual = st.tabs(["Upload assembly (FASTA)", "Enter determinants manually"])
+tab_upload, tab_manual, tab_performance = st.tabs([
+    "Upload assembly (FASTA)",
+    "Enter determinants manually",
+    "Held-out performance",
+])
 
 # The closing disclaimer refers to "every report below", so it may only appear once a
 # report actually exists. Rendered unconditionally it stacked directly under the opening
@@ -252,6 +256,99 @@ with tab_manual:
             file_name="antibiotic_report.csv",
             mime="text/csv",
         )
+
+with tab_performance:
+    # The brief asks that the responsibility requirements be shown on held-out data in
+    # the demo, not only in the repository. A judge should be able to see how the model
+    # was validated without reading the code.
+    ARTIFACTS = MODEL_PATH.parent
+
+    st.caption(
+        "Measured on genetic lineages held out of training entirely. Splitting by "
+        "lineage rather than by row is what stops the score from measuring "
+        "recognition of clones the model has already seen."
+    )
+
+    metrics_path = ARTIFACTS / "metrics_per_drug.csv"
+    if not metrics_path.exists():
+        st.warning("No evaluation artifacts yet — run `python train.py --synthetic`.")
+    else:
+        metrics = pd.read_csv(metrics_path, index_col=0)
+
+        st.warning(
+            "**These numbers come from a synthetic cohort.** They verify the pipeline "
+            "and its honesty properties. They say nothing about real-world "
+            "performance: the model has not been fitted on real genomes.",
+            icon="⚠️",
+        )
+
+        st.subheader("Per-drug performance")
+        show = [c for c in [
+            "n_test", "balanced_accuracy", "recall_resistant", "recall_susceptible",
+            "f1", "auroc", "pr_auc", "brier", "no_call_rate", "accuracy_on_called",
+        ] if c in metrics.columns]
+        st.dataframe(metrics[show].round(3), use_container_width=True)
+        st.caption(
+            "Balanced accuracy and PR-AUC rather than raw accuracy: the cohort is "
+            "heavily skewed toward resistance, so a model answering \"resistant\" every "
+            "time would post a strong accuracy having learned nothing. Recall is shown "
+            "separately for each class because a high PR-AUC can coexist with poor "
+            "susceptible recall — which is exactly what happens here for erythromycin "
+            "and ciprofloxacin, where too few susceptible examples exist to learn from."
+        )
+
+        calib_path = ARTIFACTS / "calibration_per_drug.csv"
+        if calib_path.exists():
+            st.subheader("Is the confidence real?")
+            st.dataframe(pd.read_csv(calib_path, index_col=0).round(3),
+                         use_container_width=True)
+            st.caption(
+                "Expected calibration error is the gap between stated confidence and "
+                "observed frequency. Fitted on a split disjoint from both training and "
+                "test — a calibrator fitted on test data has seen its own answers."
+            )
+            reliability = ARTIFACTS / "reliability.png"
+            if reliability.exists():
+                st.image(str(reliability),
+                         caption="Reliability curves — on the diagonal means the "
+                                 "number shown to a clinician is trustworthy.")
+
+        gen_path = ARTIFACTS / "generalization_by_cluster.csv"
+        if gen_path.exists():
+            gen = pd.read_csv(gen_path)
+            if not gen.empty and "balanced_accuracy" in gen:
+                st.subheader("Generalization across lineages")
+                spread = gen.groupby("drug")["balanced_accuracy"].agg(
+                    worst="min", mean="mean", best="max", lineages="count")
+                st.dataframe(spread.round(3), use_container_width=True)
+                st.caption(
+                    "Read the **worst** column. An aggregate score hides "
+                    "lineage-specific collapse, and the worst case is what happens "
+                    "when the system meets a lineage unlike anything it trained on — "
+                    "the situation it actually faces in a hospital."
+                )
+
+    st.divider()
+    st.subheader("How each responsibility requirement is addressed")
+    st.markdown(
+        """
+| Requirement | How |
+|---|---|
+| **Defensive by construction** | Predicts and explains resistance that already exists. No generative capability anywhere in the codebase. |
+| **Honest generalization** | Split by genetic lineage, never by row. `verify_no_leakage` raises *before* training. Per-lineage metrics above, worst case included. Covered species and drugs stated in the sidebar; anything else is refused. |
+| **Calibrated confidence + no-call** | Calibrated on a split disjoint from train and test. Probabilities between the thresholds return no-call, and a no-call carries no confidence figure — there is no claim to be confident about. |
+| **Honest explanations** | A known curated determinant is reported separately from a bare statistical association. A coefficient is never presented as biological cause. A failure call must cite a detected determinant, or it is downgraded to no-call. |
+| **Human oversight** | Lab-confirmation warning on every report. The tool makes no treatment decision. |
+"""
+    )
+    st.info(
+        "**A worked example of the third row.** The demo genome carries both `mecA` and "
+        "`blaZ`, and both are beta-lactamase-related. The cefoxitin call cites `mecA` "
+        "and not `blaZ` — `blaZ` is a penicillinase that leaves cephamycins intact, so "
+        "it correlates with resistance without causing it. Getting the call right is "
+        "not the same as getting the reason right.",
+        icon="🧬",
+    )
 
 if report_rendered:
     st.divider()
