@@ -1,0 +1,2 @@
+drug,cluster_id,n_test,n_resistant,n_susceptible,balanced_accuracy,recall_resistant,recall_susceptible,f1,auroc,pr_auc,brier,no_call_rate,accuracy_on_called
+ciprofloxacin,96,22,3,19,0.5,0.0,1.0,0.0,0.5,0.13636363636363635,0.13383502824029725,0.0,0.8636363636363636

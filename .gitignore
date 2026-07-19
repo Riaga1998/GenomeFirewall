@@ -1,7 +1,10 @@
 .venv/
 __pycache__/
 *.pyc
-artifacts/
+artifacts/*
+!artifacts/genome_firewall.joblib
+!artifacts/*.csv
+!artifacts/reliability.png
 data/raw/*
 data/processed/*
 !data/**/.gitkeep
